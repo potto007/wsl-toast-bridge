@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Called from the Windows herdr-focus: protocol handler (toast click) to focus
+# a herdr agent pane. Logs because the caller's output is a hidden window.
+set -u
+log=~/.local/state/herdr-focus-pane.log
+{
+  printf '%s target=%s\n' "$(date -Is)" "${1:-}"
+  ~/.local/bin/herdr agent focus "${1:?usage: herdr-focus-pane <pane_id>}" 2>&1
+} >>"$log"

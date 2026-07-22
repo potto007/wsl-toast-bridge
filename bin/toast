@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Windows toast from WSL via pwsh7 + BurntToast. Must run host-side: a Docker
+# container has no WSL interop and cannot exec a Windows binary (local-ai ADR-0009).
+# Usage: toast [-i IMAGE] [-p HERDR_PANE_ID] <title> [body]
+#   Click activation: herdr-focus:[PANE] protocol -> focuses Windows Terminal,
+#   and with -p also focuses that herdr pane (handler: %LOCALAPPDATA%\herdr-toast).
+#   TOAST_DRY_RUN=1 prints the PowerShell command instead of firing it.
+set -uo pipefail
+
+PWSH="${TOAST_PWSH:-$(command -v pwsh.exe)}"
+[ -n "$PWSH" ] || { echo "toast: pwsh.exe not on PATH; set TOAST_PWSH" >&2; exit 1; }
+
+img= pane=
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -i|--image)
+      [ $# -ge 2 ] || { echo "toast: $1 needs a path" >&2; exit 2; }
+      # BurntToast resolves Windows paths only. wslpath -w maps /mnt/c to C:\ and
+      # WSL-side files to \\wsl.localhost\... , which renders (verified 2026-07-22).
+      if [ -e "$2" ]; then
+        img=$(wslpath -w "$2")
+      else
+        img=$2
+        echo "toast: '$2' is not a WSL-visible file; passing through as-is" >&2
+      fi
+      shift 2 ;;
+    -p|--pane)
+      [ $# -ge 2 ] || { echo "toast: $1 needs a pane id" >&2; exit 2; }
+      pane=$2; shift 2 ;;
+    *) break ;;
+  esac
+done
+
+[ $# -ge 1 ] || { echo "usage: toast [-i IMAGE] [-p HERDR_PANE_ID] <title> [body]" >&2; exit 2; }
+
+q() { printf "'%s'" "${1//\'/\'\'}"; }  # PowerShell single-quote literal: '' escapes '
+
+cmd="\$c = @(New-BTText -Text $(q "$1")"
+[ $# -ge 2 ] && cmd="$cmd; New-BTText -Text $(q "$2")"
+cmd="$cmd); \$b = New-BTBinding -Children \$c"
+[ -n "$img" ] && cmd="$cmd -AppLogoOverride (New-BTImage -Source $(q "$img") -AppLogoOverride)"
+cmd="$cmd; Submit-BTNotification -Content (New-BTContent -Visual (New-BTVisual -BindingGeneric \$b) -ActivationType Protocol -Launch $(q "herdr-focus:$pane"))"
+
+[ -n "${TOAST_DRY_RUN:-}" ] && { printf '%s\n' "$cmd"; exit 0; }
+
+# stderr is deliberately NOT swallowed: a bad image path only warns and still
+# exits 0, so a silent last inch would hide it (the ADR-0009 failure shape).
+exec "$PWSH" -NoProfile -Command "$cmd" >/dev/null

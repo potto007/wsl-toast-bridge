@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# notify-send shim for WSL: routes freedesktop-style notifications to Windows
+# toasts via ~/.local/bin/toast (pwsh7 + BurntToast). No D-Bus notification
+# daemon exists in this WSL, so anything spawning notify-send (herdr's
+# [ui.toast] delivery = "system") would otherwise vanish.
+# Handles the standard CLI: [OPTIONS] SUMMARY [BODY...]
+set -uo pipefail
+
+log=~/.local/state/notify-send-shim.log
+printf '%s argv:' "$(date -Is)" >>"$log" 2>/dev/null
+printf ' %q' "$@" >>"$log" 2>/dev/null
+printf '\n' >>"$log" 2>/dev/null
+
+icon=
+args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -i|--icon) icon=${2:-}; shift 2 ;;
+    --icon=*) icon=${1#*=}; shift ;;
+    # valued options whose values must not be mistaken for SUMMARY
+    -u|--urgency|-t|--expire-time|-a|--app-name|-c|--category|-h|--hint|-A|--action|-r|--replace-id|-s|--server-name) shift 2 ;;
+    --*=*) shift ;;
+    -v|--version) echo "notify-send-shim 1.0 (WSL toast bridge)"; exit 0 ;;
+    -e|-p|-w|--transient|--print-id|--wait) shift ;;
+    --) shift; args+=("$@"); break ;;
+    -*) shift ;;
+    *) args+=("$1"); shift ;;
+  esac
+done
+
+[ ${#args[@]} -ge 1 ] || { echo "notify-send-shim: no summary given" >&2; exit 1; }
+
+summary=${args[0]}
+body=""
+[ ${#args[@]} -ge 2 ] && body="${args[*]:1}"
+
+# herdr passes no --app-name or icon (observed argv: `-- SUMMARY BODY`), so
+# identify it by parent process to brand its toasts with the herdr logo
+pane=
+if [ "$(ps -o comm= -p $PPID 2>/dev/null)" = herdr ]; then
+  [ -z "$icon" ] && icon=~/.local/share/toast-icons/herdr.png
+  # resolve which agent pane the notification is about by matching its text
+  # against agent titles/dirs, so clicking the toast can focus that pane
+  pane=$(timeout 3 ~/.local/bin/herdr agent list 2>/dev/null | NOTIF_TEXT="${args[*]:-}" python3 -c '
+import json, os, sys
+text = os.environ.get("NOTIF_TEXT", "").lower()
+try:
+    agents = json.load(sys.stdin)["result"]["agents"]
+except Exception:
+    sys.exit(0)
+hits = [a["pane_id"] for a in agents
+        if (t := a.get("terminal_title_stripped", "").lower()) and t in text
+        or (c := os.path.basename(a.get("cwd", "")).lower()) and c in text]
+if len(set(hits)) == 1:
+    print(hits[0])
+' 2>/dev/null)
+fi
+
+cmd=(toast)
+[ -n "$pane" ] && cmd+=(-p "$pane")
+# only pass a real file through; themed icon NAMES (e.g. "dialog-error") have
+# no Windows equivalent and toast would warn on them
+[ -n "$icon" ] && [ -e "$icon" ] && cmd+=(-i "$icon")
+cmd+=("$summary")
+[ -n "$body" ] && cmd+=("$body")
+
+exec "${cmd[@]}"
