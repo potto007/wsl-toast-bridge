@@ -1,7 +1,6 @@
 site_name: wsl-toast-bridge
 site_description: Windows toast notifications from WSL, with click-to-focus back to your terminal and Herdr pane
-# site_url: set when deploying (e.g. GitHub Pages); it also becomes the base
-# path for `mkdocs serve`, so leaving it unset keeps local serving at /
+site_url: https://potto007.github.io/wsl-toast-bridge/
 repo_url: https://github.com/potto007/wsl-toast-bridge
 edit_uri: ""
 
