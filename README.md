@@ -95,4 +95,15 @@ click dispatches to the registered handler instead.
 
 ## Docs
 
-Full architecture walkthrough: [docs/index.html](docs/index.html).
+Full documentation lives in [`docs/`](docs/) and builds with Material for MkDocs:
+
+```bash
+python3 -m venv .venv-docs
+.venv-docs/bin/pip install -r requirements-docs.txt
+.venv-docs/bin/mkdocs serve     # http://127.0.0.1:8000
+.venv-docs/bin/mkdocs build     # static site into site/
+```
+
+Pages: [overview](docs/index.md) · [install](docs/install.md) ·
+[usage](docs/usage.md) · [architecture](docs/architecture.md) ·
+[gotchas](docs/gotchas.md)
