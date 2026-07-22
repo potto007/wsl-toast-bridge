@@ -37,7 +37,7 @@ if ($target) {
   # redirected pipes give it stdio handles and make it run (observed 2026-07-22)
   $psi = New-Object System.Diagnostics.ProcessStartInfo
   $psi.FileName = "$env:SystemRoot\System32\wsl.exe"
-  $psi.Arguments = "-- /home/potto/.local/bin/herdr-focus-pane $target"
+  $psi.Arguments = "-- __WSL_HOME__/.local/bin/herdr-focus-pane $target"
   $psi.UseShellExecute = $false
   $psi.RedirectStandardOutput = $true
   $psi.RedirectStandardError = $true

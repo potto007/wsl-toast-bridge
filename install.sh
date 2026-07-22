@@ -24,7 +24,7 @@ mkdir -p ~/.local/share/toast-icons
 WINHOME=$("$PWSH" -NoProfile -Command 'Write-Output $env:LOCALAPPDATA' | tr -d '\r')
 HANDLER_DIR=$(wslpath "$WINHOME")/herdr-toast
 mkdir -p "$HANDLER_DIR"
-sed "s|/home/potto|$HOME|g" windows/focus.ps1 > "$HANDLER_DIR/focus.ps1"
+sed "s|__WSL_HOME__|$HOME|g" windows/focus.ps1 > "$HANDLER_DIR/focus.ps1"
 
 "$PWSH" -NoProfile -Command '
 $root = "HKCU:\Software\Classes\herdr-focus"

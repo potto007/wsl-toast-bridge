@@ -12,7 +12,7 @@ Install-Module BurntToast -Scope CurrentUser
 ## Run the installer
 
 ```bash
-git clone https://github.com/ClearBridgeRIP/wsl-toast-bridge
+git clone https://github.com/potto007/wsl-toast-bridge
 cd wsl-toast-bridge
 ./install.sh
 toast "Hello" "from the WSL toast bridge"
